@@ -7,6 +7,7 @@ import styles from '../styles/App.module.scss'
 
 const INITIAL_LEN = 6;
 const MAX_LEN = 20;
+const SITE_URL = 'https://githule.vercel.app/';
 
 const App = () => {
   const initText = () => Array(6).fill('⬜').map(i => new Array(7).fill(i));
@@ -73,9 +74,9 @@ const App = () => {
   const makeTweetText = () => {
     const graphText = canvasText.map(e => e.join('')).join('\n') + '\n';
     console.log(graphText);
-    setTweet(`GitHule ${getDateStr()} (${gitHubId})\n\n${graphText}`);
+    setTweet(`GitHule ${getDateStr()} (${gitHubId})\n\n${graphText}\n${SITE_URL}`);
     setTweetUrl(
-      encodeURI(`https://twitter.com/share?text=GitHule ${getDateStr()} (${gitHubId})\n\n${graphText}`)
+      encodeURI(`https://twitter.com/share?url=${SITE_URL}&text=GitHule ${getDateStr()} (${gitHubId})\n\n${graphText}`)
     );
   }
   const copyTweetToClipboard = () => {
