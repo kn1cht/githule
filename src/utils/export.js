@@ -20,3 +20,9 @@ export function contributionsToCounts(data){
   const latestContributions = data.contributions.slice(foundIndex, foundIndex + 141).map(e => e.count);
   return latestContributions;
 }
+
+export function normalizedCountToColor(count) {
+  if(count == 0) return '⬜';
+  else if(count < 0.3) return '🟨';
+  else return '🟩';
+};

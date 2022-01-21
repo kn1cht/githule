@@ -1,5 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
-import { fetchData, cleanUsername, contributionsToCounts, getDateStr } from "../utils/export";
+import ReactNotification, { store } from 'react-notifications-component';
+import 'react-notifications-component/dist/theme.css';
+import { fetchData, cleanUsername, contributionsToCounts, getDateStr, normalizedCountToColor } from "../utils/export";
 
 import styles from '../styles/App.module.scss'
 
@@ -10,12 +12,18 @@ const App = () => {
   const initText = () => Array(6).fill('⬜').map(i => new Array(7).fill(i));
   const inputRef = useRef();
   const [canvasText, setCanvasText] = useState(initText());
+  const [clipboard, setClipboard] = useState(null);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [gitHubId, setGitHubId] = useState('');
   const [graphLength, setGraphLength] = useState(INITIAL_LEN);
   const [loading, setLoading] = useState(false);
+  const [tweet, setTweet] = useState('');
+  const [tweetUrl, setTweetUrl] = useState('');
 
+  useEffect(() => {
+    setClipboard(navigator.clipboard);
+  }, []);
   useEffect(() => {
     if (!data) {
       return;
@@ -23,11 +31,10 @@ const App = () => {
     drawCanvas();
   }, [data]);
 
-  const normalizedCountToColor = (count) => {
-    if(count == 0) return '⬜';
-    else if(count < 0.3) return '🟨';
-    else return '🟩';
-  };
+  useEffect(() => {
+    makeTweetText();
+  }, [canvasText]);
+
   const handleSubmit = e => {
     e.preventDefault();
 
@@ -63,6 +70,46 @@ const App = () => {
     }
     setCanvasText(canvasTextNew);
   }
+  const makeTweetText = () => {
+    const graphText = canvasText.map(e => e.join('')).join('\n') + '\n';
+    console.log(graphText);
+    setTweet(`GitHule ${getDateStr()} (${gitHubId})\n\n${graphText}`);
+    setTweetUrl(
+      encodeURI(`https://twitter.com/share?text=GitHule ${getDateStr()} (${gitHubId})\n\n${graphText}`)
+    );
+  }
+  const copyTweetToClipboard = () => {
+    if(clipboard) {
+      clipboard.writeText(tweet).then(() => {
+        store.addNotification({
+          message: 'Copied to clipboard',
+          type: 'success',
+          insert: 'top',
+          container: 'top-right',
+          showIcon: true,
+          animationIn: ['animate__animated', 'animate__fadeIn'],
+          animationOut: ['animate__animated', 'animate__fadeOut'],
+          dismiss: {
+            duration: 3000,
+          }
+        });
+      });
+    }
+    else {
+      store.addNotification({
+        message: 'Failed to copy',
+        type: 'warning',
+        insert: 'top',
+        container: 'top-right',
+        showIcon: true,
+        animationIn: ['animate__animated', 'animate__fadeIn'],
+        animationOut: ['animate__animated', 'animate__fadeOut'],
+        dismiss: {
+          duration: 3000,
+        }
+      });
+    }
+  };
   const _renderError = () => {
     return (
       <div className="App-error App-centered">
@@ -72,55 +119,74 @@ const App = () => {
   };
 
   return (
-    <div className={styles.container}>
-      <header className={styles.header}>
-        <h1 className="title is-2 is-uppercase has-text-centered has-text-weight-bold">GitHule</h1>
-      </header>
-      <main className="block">
-        <div className="box columns">
-          <div className="column is-narrow">
-            <label className="label">GitHub Username</label>
-            <form onSubmit={handleSubmit} className="field has-addons">
-              <p className="control">
-              <input ref={inputRef} className="input is-medium" type="text"
-                    name="github_id" value={gitHubId} pattern="^[A-Za-z\d\-]+$"
-                    onChange={e => setGitHubId(e.target.value)} placeholder="Your GitHub Username" autoFocus />
-              </p>
-              <p className="control">
-              <button type="submit" className="button is-medium is-dark"
-                      disabled={gitHubId.length <= 0}>Draw</button>
-              </p>
-            </form>
-            {error !== null && _renderError()}
-          </div>
-          <div className="column">
-            from {getDateStr(graphLength * 7)}
-            <div className="is-size-3">
-              {canvasText.map((row, rowIndex) => (
-                <div key={rowIndex}>
-                  {row.map((text, columnIndex) => (
-                    <span key={columnIndex}>{text}</span>
-                  ))}
+    <>
+      <ReactNotification />
+      <div className="container">
+        <header className={styles.header}>
+          <h1 className="title is-2 is-uppercase has-text-centered has-text-weight-bold">GitHule</h1>
+        </header>
+        <main className="block">
+          <div className="box columns">
+            <div className="column is-narrow">
+              <label className="label">GitHub Username</label>
+              <form onSubmit={handleSubmit} className="field has-addons">
+                <p className="control">
+                <input ref={inputRef} className="input is-medium" type="text"
+                      name="github_id" value={gitHubId} pattern="^[A-Za-z\d\-]+$"
+                      onChange={e => setGitHubId(e.target.value)} placeholder="Your GitHub Username" autoFocus />
+                </p>
+                <p className="control">
+                <button type="submit" className="button is-medium is-dark"
+                        disabled={gitHubId.length <= 0}>Draw</button>
+                </p>
+              </form>
+              {error !== null && _renderError()}
+              {data !== null && (
+                <div className="buttons">
+                  <a href={tweetUrl} className="button is-medium is-twitter" target="_blank" rel="noopener noreferrer">
+                    <span className="icon">
+                      <i className="fab fa-twitter"></i>
+                    </span>
+                    <span>Tweet</span>
+                  </a>
+                  <button className="button is-medium is-dark" onClick={copyTweetToClipboard}>
+                    <span className="icon">
+                      <i className="fas fa-clipboard"></i>
+                    </span>
+                    <span>Copy</span>
+                  </button>
                 </div>
-              ))}
+              )}
             </div>
-            to {getDateStr()}
+            <div className="column">
+              from {getDateStr(graphLength * 7)}
+              <div className="is-size-3">
+                {canvasText.map((row, rowIndex) => (
+                  <div key={rowIndex}>
+                    {row.map((text, columnIndex) => (
+                      <span key={columnIndex}>{text}</span>
+                    ))}
+                  </div>
+                ))}
+              </div>
+              to {getDateStr()}
+            </div>
           </div>
-        </div>
-      </main>
+        </main>
 
-      <footer className={styles.footer}>
-        <a href="https://github.com/kn1cht/githule" target="_blank" rel="noopener noreferrer">
-          <i className="fab fa-github"></i> kn1cht/githule
-        </a>
-      </footer>
-      <div className={'modal' + (loading === true ? ' is-active' : '')}>
-        <div className="modal-background"></div>
-        <div className={'modal-content fa-3x ' + styles.loading}>
-          <i className="fas fa-spinner fa-pulse"></i>
+        <footer className={styles.footer}>
+          <a href="https://github.com/kn1cht/githule" target="_blank" rel="noopener noreferrer">
+            <i className="fab fa-github"></i> kn1cht/githule
+          </a>
+        </footer>
+        <div className={'modal' + (loading === true ? ' is-active' : '')}>
+          <div className="modal-background"></div>
+          <div className={'modal-content fa-3x ' + styles.loading}>
+            <i className="fas fa-spinner fa-pulse"></i>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 }
 

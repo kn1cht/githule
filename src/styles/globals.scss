@@ -1,4 +1,8 @@
-@import "../../node_modules/bulma/bulma.sass";
+$container-max-width: 850px;
+$notification-background-color: transparent;
+
+@import "bulma/bulma.sass";
+@import "bulma-social/css/all.min.css";
 
 html, body {
   padding: 0;
