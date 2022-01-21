@@ -1,160 +1,68 @@
 import React, { useRef, useState, useEffect } from "react";
-import { download, uploadToTwitter, fetchData, downloadJSON, cleanUsername } from "../utils/export";
-import ThemeSelector from "../components/themes";
+import { fetchData, cleanUsername, contributionsToCounts, getDateStr } from "../utils/export";
+
+import styles from '../styles/App.module.scss'
+
+const INITIAL_LEN = 6;
+const MAX_LEN = 20;
 
 const App = () => {
+  const initText = () => Array(6).fill('⬜').map(i => new Array(7).fill(i));
   const inputRef = useRef();
-  const canvasRef = useRef();
-  const [loading, setLoading] = useState(false);
-  const [username, setUsername] = useState("");
-  const [theme, setTheme] = useState("standard");
+  const [canvasText, setCanvasText] = useState(initText());
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [gitHubId, setGitHubId] = useState('');
+  const [graphLength, setGraphLength] = useState(INITIAL_LEN);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (!data) {
       return;
     }
-    draw();
-  }, [data, theme]);
+    drawCanvas();
+  }, [data]);
 
+  const normalizedCountToColor = (count) => {
+    if(count == 0) return '⬜';
+    else if(count < 0.3) return '🟨';
+    else return '🟩';
+  };
   const handleSubmit = e => {
     e.preventDefault();
 
-    setUsername(cleanUsername(username));
+    setGitHubId(cleanUsername(gitHubId));
     setLoading(true);
     setError(null);
     setData(null);
 
-    fetchData(cleanUsername(username))
-      .then(data => {
+    fetchData(cleanUsername(gitHubId))
+      .then(res => {
         setLoading(false);
-
-        if (data.years.length === 0) {
+        if (res.years.length === 0) {
           setError("Could not find your profile");
         } else {
-          setData(data);
+          setData(res);
           inputRef.current.blur();
         }
       })
       .catch(err => {
         console.log(err);
-        setLoading(false);
         setError("I could not check your profile successfully...");
       });
   };
+  const drawCanvas = () => {
+    const counts = contributionsToCounts(data).slice(0, graphLength * 7).reverse();
+    console.log(counts);
+    const maxCount = Math.max(counts.reduce((pre, cur) => Math.max(pre, cur)), 1);
 
-  const onDownload = e => {
-    e.preventDefault();
-    download(canvasRef.current);
-  };
-
-  const onDownloadJson = e => {
-    e.preventDefault();
-    if (data != null) {
-      downloadJSON(data);
+    let canvasTextNew = Array(graphLength).fill('⬜').map(i => new Array(7).fill(i));
+    for(let i = 0; i <= graphLength; ++i) {
+      const normalizedCountsInOneWeek = counts.slice(i * 7, (i + 1) * 7);
+      canvasTextNew[i] = normalizedCountsInOneWeek.map(e => normalizedCountToColor(e / maxCount));
     }
-  };
-
-  const onShareTwitter = e => {
-    e.preventDefault();
-    uploadToTwitter(canvasRef.current);
-  };
-
-  const draw = async () => {
-    if (!canvasRef.current || !data) {
-      setError("Something went wrong... Check back later.");
-      return;
-    }
-
-    const { drawContributions } = await import("github-contributions-canvas");
-
-    drawContributions(canvasRef.current, {
-      data,
-      username: username,
-      themeName: theme,
-      footerText: "Made by @sallar & friends - github-contributions.now.sh"
-    });
-  };
-
-  const _renderGithubButton = () => {
-    return (
-      <div className="App-github-button">
-        <a
-          className="github-button"
-          href="https://github.com/sallar/github-contributions-chart"
-          data-size="large"
-          data-show-count="true"
-          aria-label="Star sallar/github-contribution-chart on GitHub"
-        >
-          Star
-        </a>
-      </div>
-    );
-  };
-
-  const _renderLoading = () => {
-    return (
-      <div className="App-centered">
-        <div className="App-loading">
-          <img src={"/loading.gif"} alt="Loading..." width={200} />
-          <p>Please wait, I’m visiting your profile...</p>
-        </div>
-      </div>
-    );
-  };
-
-  const _renderGraphs = () => {
-    return (
-      <div
-        className="App-result"
-        style={{ display: data !== null && !loading ? "block" : "none" }}
-      >
-        <p>Your chart is ready!</p>
-        <div className="App-buttons">
-          <button
-            className="App-download-button"
-            onClick={onDownload}
-            type="button"
-          >
-            Download the Image
-          </button>
-          or
-          <button
-            className="App-twitter-button"
-            onClick={onShareTwitter}
-            type="button"
-          >
-            Share on Twitter
-          </button>
-        </div>
-
-        <canvas ref={canvasRef} />
-      </div>
-    );
-  };
-
-  const _renderForm = () => {
-    return (
-      <form onSubmit={handleSubmit}>
-        <input
-          ref={inputRef}
-          placeholder="Your GitHub Username"
-          onChange={e => setUsername(e.target.value)}
-          value={username}
-          id="username"
-          autoFocus
-        />
-        <button type="submit" disabled={username.length <= 0}>
-          <span role="img" aria-label="Stars">
-            ✨
-          </span>{" "}
-          Generate!
-        </button>
-      </form>
-    );
-  };
-
+    setCanvasText(canvasTextNew);
+  }
   const _renderError = () => {
     return (
       <div className="App-error App-centered">
@@ -163,56 +71,57 @@ const App = () => {
     );
   };
 
-  const _renderDownloadAsJSON = () => {
-    if (data === null) return;
-    return (
-      <a
-        href="#" 
-        onClick={onDownloadJson}
-      >
-        <span role="img" aria-label="Bar Chart">
-        📊
-        </span>{" "}
-        Download data as JSON for your own visualizations
-      </a>
-    );
-  };
-
   return (
-    <div className="App">
-      <header className="App-header">
-        <div className="App-logo">
-          <img src="/tentocats.jpg" width={200} alt="Tentocats" />
-          <h1>GitHub Contributions Chart Generator</h1>
-          <h4>All your contributions in one image!</h4>
-        </div>
-        {_renderForm()}
-        <ThemeSelector
-          currentTheme={theme}
-          onChangeTheme={themeName => setTheme(themeName)}
-        />
-        {_renderGithubButton()}
-        <footer>
-          <p>
-            Not affiliated with GitHub Inc. Octocat illustration made by{" "}
-            <a
-              href="https://octodex.github.com/tentocat/"
-              rel="noopener nofollow"
-            >
-              GitHub design team
-            </a>
-            .
-          </p>
-          {_renderDownloadAsJSON()}
-        </footer>
+    <div className={styles.container}>
+      <header className={styles.header}>
+        <h1 className="title is-2 is-uppercase has-text-centered has-text-weight-bold">GitHule</h1>
       </header>
-      <section className="App-content">
-        {loading && _renderLoading()}
-        {error !== null && _renderError()}
-        {_renderGraphs()}
-      </section>
-    </div>
-  );
-};
+      <main className="block">
+        <div className="box columns">
+          <div className="column is-narrow">
+            <label className="label">GitHub Username</label>
+            <form onSubmit={handleSubmit} className="field has-addons">
+              <p className="control">
+              <input ref={inputRef} className="input is-medium" type="text"
+                    name="github_id" value={gitHubId} pattern="^[A-Za-z\d\-]+$"
+                    onChange={e => setGitHubId(e.target.value)} placeholder="Your GitHub Username" autoFocus />
+              </p>
+              <p className="control">
+              <button type="submit" className="button is-medium is-dark"
+                      disabled={gitHubId.length <= 0}>Draw</button>
+              </p>
+            </form>
+            {error !== null && _renderError()}
+          </div>
+          <div className="column">
+            from {getDateStr(graphLength * 7)}
+            <div className="is-size-3">
+              {canvasText.map((row, rowIndex) => (
+                <div key={rowIndex}>
+                  {row.map((text, columnIndex) => (
+                    <span key={columnIndex}>{text}</span>
+                  ))}
+                </div>
+              ))}
+            </div>
+            to {getDateStr()}
+          </div>
+        </div>
+      </main>
 
-export default App;
+      <footer className={styles.footer}>
+        <a href="https://github.com/kn1cht/githule" target="_blank" rel="noopener noreferrer">
+          <i className="fab fa-github"></i> kn1cht/githule
+        </a>
+      </footer>
+      <div className={'modal' + (loading === true ? ' is-active' : '')}>
+        <div className="modal-background"></div>
+        <div className={'modal-content fa-3x ' + styles.loading}>
+          <i className="fas fa-spinner fa-pulse"></i>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export default App

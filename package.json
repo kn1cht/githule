@@ -1,11 +1,12 @@
 {
-  "name": "github-contribution-chart",
+  "name": "githule",
   "description": "Generate an image of all your GitHub contributions",
   "version": "2.0.0",
   "engines": {
     "node": ">=10"
   },
   "dependencies": {
+    "bulma": "^0.9.3",
     "cheerio": "^1.0.0-rc.3",
     "data-uri-to-buffer": "^3.0.0",
     "github-contributions-canvas": "^0.6.0",
@@ -16,6 +17,7 @@
     "prop-types": "^15.7.2",
     "react": "17.0.2",
     "react-dom": "17.0.2",
+    "sass": "^1.49.0",
     "twitter": "^1.7.1"
   },
   "license": "MIT",

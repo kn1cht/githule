@@ -78,8 +78,8 @@ async function fetchDataForYear(url, year, format) {
   };
 }
 
-export async function fetchDataForAllYears(username, format) {
-  const years = await fetchYears(username);
+export async function fetchDataForLastTwoYears(username, format) {
+  const years = (await fetchYears(username)).slice(0, 2);
   return Promise.all(
     years.map((year) => fetchDataForYear(year.href, year.text, format))
   ).then((resp) => {
