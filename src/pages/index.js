@@ -1,24 +1,31 @@
 import React, { useRef, useState, useEffect } from "react";
 import ReactNotification, { store } from 'react-notifications-component';
 import 'react-notifications-component/dist/theme.css';
+import Slider, { createSliderWithTooltip } from 'rc-slider';
+const SliderWithTooltip = createSliderWithTooltip(Slider);
+import 'rc-slider/assets/index.css';
 import { fetchData, cleanUsername, contributionsToCounts, getDateStr, normalizedCountToColor } from "../utils/export";
 
 import styles from '../styles/App.module.scss'
 
 const INITIAL_LEN = 6;
+const INITIAL_WIDTH = 7;
 const MAX_LEN = 20;
+const INITIAL_THRESHOLD = 0.3;
 const SITE_URL = 'https://githule.vercel.app/';
 
 const App = () => {
-  const initText = () => Array(6).fill('⬜').map(i => new Array(7).fill(i));
   const inputRef = useRef();
-  const [canvasText, setCanvasText] = useState(initText());
+  const [canvasText, setCanvasText] = useState(Array(INITIAL_LEN).fill('⬜').map(i => new Array(INITIAL_WIDTH).fill(i)));
   const [clipboard, setClipboard] = useState(null);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [gitHubId, setGitHubId] = useState('');
   const [graphLength, setGraphLength] = useState(INITIAL_LEN);
+  const [graphWidth, setGraphWidth] = useState(INITIAL_WIDTH);
   const [loading, setLoading] = useState(false);
+  const [maxContributionCount, setMaxContributionCount] = useState(1);
+  const [threshold, setThreshold] = useState(INITIAL_THRESHOLD);
   const [tweet, setTweet] = useState('');
   const [tweetUrl, setTweetUrl] = useState('');
 
@@ -30,7 +37,7 @@ const App = () => {
       return;
     }
     drawCanvas();
-  }, [data]);
+  }, [data, graphLength, graphWidth, threshold]);
 
   useEffect(() => {
     makeTweetText();
@@ -60,14 +67,15 @@ const App = () => {
       });
   };
   const drawCanvas = () => {
-    const counts = contributionsToCounts(data).slice(0, graphLength * 7).reverse();
+    const counts = contributionsToCounts(data).slice(0, graphLength * graphWidth).reverse();
     console.log(counts);
     const maxCount = Math.max(counts.reduce((pre, cur) => Math.max(pre, cur)), 1);
+    setMaxContributionCount(maxCount);
 
-    let canvasTextNew = Array(graphLength).fill('⬜').map(i => new Array(7).fill(i));
+    let canvasTextNew = Array(graphLength).fill('⬜').map(i => new Array(graphWidth).fill(i));
     for(let i = 0; i <= graphLength; ++i) {
-      const normalizedCountsInOneWeek = counts.slice(i * 7, (i + 1) * 7);
-      canvasTextNew[i] = normalizedCountsInOneWeek.map(e => normalizedCountToColor(e / maxCount));
+      const normalizedCountsInOneWeek = counts.slice(i * graphWidth, (i + 1) * graphWidth);
+      canvasTextNew[i] = normalizedCountsInOneWeek.map(e => normalizedCountToColor(e / maxCount, threshold));
     }
     setCanvasText(canvasTextNew);
   }
@@ -123,11 +131,11 @@ const App = () => {
     <>
       <ReactNotification />
       <div className="container">
-        <header className={styles.header}>
+        <header>
           <h1 className="title is-2 is-uppercase has-text-centered has-text-weight-bold">GitHule</h1>
         </header>
         <main className="block">
-          <div className="box columns">
+          <div className="columns">
             <div className="column is-narrow">
               <label className="label">GitHub Username</label>
               <form onSubmit={handleSubmit} className="field has-addons">
@@ -158,9 +166,48 @@ const App = () => {
                   </button>
                 </div>
               )}
+              {data !== null && (
+                <details>
+                  <summary className="button">
+                    <span className="icon">
+                      <i className="fas fa-cog"></i>
+                    </span>
+                    <span>Advanced Settings</span>
+                  </summary>
+                  <div className={'box ' + styles['details-content']}>
+                    <div className="block">
+                      <h2 className="tittle is-3 has-text-weight-bold">
+                        Yellow / Green threshold
+                      </h2>
+                      <SliderWithTooltip value={threshold * maxContributionCount}
+                                        onChange={v => setThreshold(v / maxContributionCount)}
+                                        min={0} max={maxContributionCount}
+                                        step={1} dots={true} />
+                    </div>
+                    <div className="block">
+                      <h2 className="tittle is-3 has-text-weight-bold">
+                        Length
+                      </h2>
+                      <SliderWithTooltip value={graphLength}
+                                        onChange={setGraphLength}
+                                        min={3} max={MAX_LEN}
+                                        step={1} dots={true} />
+                    </div>
+                    <div className="block">
+                      <h2 className="tittle is-3 has-text-weight-bold">
+                        Width
+                      </h2>
+                      <SliderWithTooltip value={graphWidth}
+                                        onChange={setGraphWidth}
+                                        min={5} max={7}
+                                        step={1} dots={true} />
+                    </div>
+                  </div>
+                </details>
+              )}
             </div>
             <div className="column">
-              from {getDateStr(graphLength * 7)}
+              from {getDateStr(graphLength * graphWidth)}
               <div className="is-size-3">
                 {canvasText.map((row, rowIndex) => (
                   <div key={rowIndex}>

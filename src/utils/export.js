@@ -21,8 +21,8 @@ export function contributionsToCounts(data){
   return latestContributions;
 }
 
-export function normalizedCountToColor(count) {
+export function normalizedCountToColor(count, threshold) {
   if(count == 0) return '⬜';
-  else if(count < 0.3) return '🟨';
+  else if(count <= threshold) return '🟨';
   else return '🟩';
 };
