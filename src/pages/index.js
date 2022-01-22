@@ -134,7 +134,7 @@ const App = () => {
         <header>
           <h1 className="title is-2 is-uppercase has-text-centered has-text-weight-bold">GitHule</h1>
         </header>
-        <main className="block">
+        <main className="block p-4">
           <div className="columns">
             <div className="column is-narrow">
               <label className="label">GitHub Username</label>
