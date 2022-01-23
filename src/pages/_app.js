@@ -13,7 +13,7 @@ const App = ({ Component, pageProps }) => (
       <meta property="og:site_name" content="GitHule" />
       <meta property="og:description" content="A daily GitHub contribution" />
       <meta property="og:url" content="" />
-      <meta property="og:image" content="" />
+      <meta property="og:image" content="https://githule.vercel.app/ogp.png" />
       <meta property="og:type" content="website" />
       <script defer src="https://use.fontawesome.com/releases/v5.15.4/js/all.js"></script>
     </Head>
