@@ -9,7 +9,7 @@ import { fetchData, cleanUsername, contributionsToCounts, getDateStr, normalized
 import styles from '../styles/App.module.scss'
 
 const INITIAL_LEN = 6;
-const INITIAL_WIDTH = 7;
+const INITIAL_WIDTH = 5;
 const MAX_LEN = 20;
 const INITIAL_THRESHOLD = 0.3;
 const SITE_URL = 'https://githule.vercel.app/';
